@@ -1,0 +1,10 @@
+- name: Pick the hardening checks
+  ansible.builtin.set_fact:
+    _checks: "{{ hardening_checks }}"
+
+
+- name: Run each section
+  ansible.builtin.include_tasks: section.yml
+  loop: "{{ _checks }}" 
+  loop_control:
+    label: "{{ item.id }}"

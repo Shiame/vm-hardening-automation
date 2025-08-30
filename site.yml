@@ -1,0 +1,13 @@
+- name: CIS Hardening 
+  hosts: linux
+  gather_facts: true
+  become: true
+
+
+  roles:
+    - hardening
+
+
+  tasks:
+    - name: Include Lynis
+      ansible.builtin.import_tasks: roles/hardening/tasks/lynis.yml

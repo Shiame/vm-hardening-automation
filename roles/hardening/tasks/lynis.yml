@@ -1,0 +1,97 @@
+- name: Ensure Lynis is installed
+  ansible.builtin.apt:
+    name: lynis
+    state: present
+    update_cache: true
+  tags: ["lynis"]
+
+- name: Run Lynis audit
+  ansible.builtin.command: lynis audit system --quiet
+  register: lynis_out
+  changed_when: false
+  failed_when: false
+  tags: ["lynis"]
+
+- name: Check if Lynis report file exists
+  ansible.builtin.stat:
+    path: /var/log/lynis-report.dat
+  register: lynis_report_stat
+  tags: ["lynis"]
+
+- name: Read Lynis structured report file
+  ansible.builtin.slurp:
+    src: /var/log/lynis-report.dat
+  register: lynis_report_raw
+  when: lynis_report_stat.stat.exists
+  tags: ["lynis"]
+
+- name: Parse hardening index from report file
+  ansible.builtin.set_fact:
+    hardening_index: "{{ (lynis_report_raw.content | b64decode).split('\n') 
+                        | select('match', '^hardening_index=.*')
+                        | map('regex_replace', '^hardening_index=', '')
+                        | first | default('unknown') }}"
+  when: lynis_report_stat.stat.exists
+  tags: ["lynis"]
+
+- name: Parse additional metrics from report file
+  ansible.builtin.set_fact:
+    tests_performed: "{{ (lynis_report_raw.content | b64decode).split('\n')
+                        | select('match', '^tests_performed=.*')
+                        | map('regex_replace', '^tests_performed=', '')
+                        | first | default('unknown') }}"
+    warnings_count: "{{ (lynis_report_raw.content | b64decode).split('\n')
+                       | select('match', '^warning=.*')
+                       | length | default(0) }}"
+    suggestions_count: "{{ (lynis_report_raw.content | b64decode).split('\n')
+                          | select('match', '^suggestion=.*')
+                          | length | default(0) }}"
+  when: lynis_report_stat.stat.exists
+  tags: ["lynis"]
+
+- name: Fallback - set unknown values if report file missing
+  ansible.builtin.set_fact:
+    hardening_index: "unknown"
+    tests_performed: "unknown"
+    warnings_count: "unknown"
+    suggestions_count: "unknown"
+  when: not lynis_report_stat.stat.exists
+  tags: ["lynis"]
+
+- name: Show parsed metrics
+  ansible.builtin.debug:
+    msg: |
+      Hardening index: {{ hardening_index }}
+      Tests performed: {{ tests_performed }}
+      Warnings: {{ warnings_count }}
+      Suggestions: {{ suggestions_count }}
+  tags: ["lynis"]
+
+- name: Email Lynis security report
+  ansible.builtin.mail:
+    host: "{{ smtp_host }}"
+    port: "{{ smtp_port }}"
+    username: "{{ smtp_username }}"
+    password: "{{ smtp_password }}"
+    secure: "{{ 'starttls' if smtp_starttls else omit }}"
+    to: "{{ notify_email_to }}"
+    subject: "Lynis Security Report - {{ inventory_hostname }} (Score: {{ hardening_index }})"
+    body: |
+      Security Audit Summary for {{ inventory_hostname }}
+      =====================================================
+      
+      Hardening Index: {{ hardening_index }}/100
+      Tests Performed: {{ tests_performed }}
+      Warnings Found: {{ warnings_count }}
+      Suggestions: {{ suggestions_count }}
+      
+      Scan completed at: {{ ansible_date_time.iso8601 }}
+      
+      Full structured report data:
+      =====================================================
+      {{ lynis_report_raw.content | b64decode }}
+  tags: ["lynis", "notify"]
+  when: 
+    - smtp_host is defined 
+    - notify_email_to is defined
+    - lynis_report_stat.stat.exists

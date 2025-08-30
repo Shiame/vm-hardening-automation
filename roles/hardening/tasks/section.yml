@@ -1,0 +1,84 @@
+- name: Copy audit script to remote host
+  ansible.builtin.copy:
+    src: "{{ remote_scripts_root }}/{{ item.audit }}"
+    dest: "/tmp/{{ item.id }}_audit.sh"
+    mode: '0755'
+
+- name: Copy remediation script to remote host (if exists)
+  ansible.builtin.copy:
+    src: "{{ remote_scripts_root }}/{{ item.remediate }}"
+    dest: "/tmp/{{ item.id }}_remediate.sh"
+    mode: '0755'
+  when: item.remediate != ""
+
+- name: "[AUDIT] {{ item.name }}"
+  ansible.builtin.command:
+    cmd: "/tmp/{{ item.id }}_audit.sh"
+  register: audit_out
+  changed_when: false
+  failed_when: false
+  tags: audit
+
+- name: Determine non-compliance
+  ansible.builtin.set_fact:
+    section_noncompliant: >-
+      {{
+        (detection_mode == 'rc' and (audit_out.rc | int != 0)) or
+        (detection_mode == 'pattern' and
+         (audit_out.stdout is defined and
+          (audit_out.stdout | regex_search(fail_pattern) is not none)))
+      }}
+
+- name: Show audit outcome
+  ansible.builtin.debug:
+    msg:
+      - "Section: {{ item.id }} - {{ item.name }}"
+      - "RC: {{ audit_out.rc | default('n/a') }}"
+      - "Non-compliant? {{ section_noncompliant }}"
+
+
+- name: "[REMEDIATE] {{ item.name }}"
+  ansible.builtin.command:
+    cmd: "/tmp/{{ item.id }}_remediate.sh"
+  register: remediate_out
+  when: section_noncompliant and item.remediate != ""
+  changed_when: true
+  failed_when: false
+  tags: remediation
+
+- name: "[VALIDATE] {{ item.name }}"
+  ansible.builtin.command:
+    cmd: "/tmp/{{ item.id }}_audit.sh"
+  register: validate_out
+  changed_when: false
+  failed_when: false
+  tags: validate
+
+- name: Final compliance after remediation
+  ansible.builtin.set_fact:
+    section_still_noncompliant: >-
+      {{
+        (detection_mode == 'rc' and (validate_out.rc | int != 0)) or
+        (detection_mode == 'pattern' and
+         (validate_out.stdout is defined and
+          (validate_out.stdout | regex_search(fail_pattern) is not none)))
+      }}
+
+- name: Print final result
+  ansible.builtin.debug:
+    msg:
+      - "After remediation - non-compliant? {{ section_still_noncompliant }}"
+
+- name: Remove audit script from remote host
+  ansible.builtin.file:
+    path: "/tmp/{{ item.id }}_audit.sh"
+    state: absent
+  tags: cleanup
+
+- name: Remove remediation script from remote host
+  ansible.builtin.file:
+    path: "/tmp/{{ item.id }}_remediate.sh"
+    state: absent
+  when: item.remediate != ""
+  tags: cleanup
+

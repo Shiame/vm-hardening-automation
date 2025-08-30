@@ -1,0 +1,104 @@
+remote_scripts_root: "~/hardening_ansible/files"
+
+notify_email_to: "cbouazza820@gmail.com"
+smtp_host: "smtp.gmail.com"
+smtp_port: 587
+smtp_username: "bouazzachaimae81@gmail.com"
+smtp_password: "qsyr balk qodh vcxy"
+smtp_starttls: true
+
+detection_mode: "pattern"
+fail_pattern: "\\[FAIL\\]"
+
+hardening_checks:
+  # -------- Package Management --------
+  - id: package_general
+    name: "Package - General"
+    audit: "package-mgmt/audit.sh"
+    remediate: "package-mgmt/remediation.sh"
+    tags: ["cis_package"]
+
+  # -------- Firewall & Network --------
+  - id: firwall_ufw
+    name: "Firewall (UFW)"
+    audit: "firewall-ufw/audit-ufw.sh"
+    remediate: "firewall-ufw/remediation-ufw.sh"
+    tags: ["cis_firewall"]
+
+  - id: network
+    name: "Network Configuration"
+    audit: "network/audit-network.sh"
+    remediate: "network/remediation-network.sh"
+    tags: ["cis_network"]
+
+  # -------- Password Policies --------
+  - id: pam_unix
+    name: "Password - PAM Unix"
+    audit: "password-policies/pam-unix/audit-pam-unix.sh"
+    remediate: "password-policies/pam-unix/remediation-pam-unix.sh"
+    tags: ["cis_password"]
+
+  - id: pw_quality
+    name: "Password - pwquality"
+    audit: "password-policies/password-quality/audit-password-quality.sh"
+    remediate: "password-policies/password-quality/remediation-password-quality.sh"
+    tags: ["cis_password"]
+
+  - id: pw_faillock
+    name: "Password - pwfaillock"
+    audit: "password-policies/pw-faillock/audit-pw-faillock.sh"
+    remediate: "password-policies/pw-faillock/remediation-pw-faillock.sh"
+    tags: ["cis_password"]
+
+  - id: pw_history
+    name: "Password - pwhistory"
+    audit: "password-policies/pw-history/audit-pw-history.sh"
+    remediate: "password-policies/pw-history/remediation-pw-history.sh"
+    tags: ["cis_password"]
+
+  # -------- Privilege Escalation --------
+  - id: prvlg_escalation
+    name: "Privilege Escalation"
+    audit: "prvlg-escalation/audit-prvlg.sh"
+    remediate: "prvlg-escalation/remediation-prvlg.sh"
+    tags: ["cis_privilege"]
+
+  # -------- System Maintenance --------
+  - id: sys_file_permissions
+    name: "System - File Permissions"
+    audit: "System_Maintenance/system_file_permissions/audit_system_file_permissions.sh"
+    remediate: "System_Maintenance/system_file_permissions/remediation_system_file_permissions.sh"
+    tags: ["cis_system"]
+
+  - id: sys_user_group
+    name: "System - User & Group Settings"
+    audit: "System_Maintenance/user_group_settings/audit_user_group_settings.sh"
+    remediate: "System_Maintenance/user_group_settings/remediation_user_group_settings.sh"
+    tags: ["cis_system"]
+
+  # -------- Unused Services --------
+  - id: unused_client_services
+    name: "Unused Services - Client"
+    audit: "unsued-services/client-services/audit-client-services.sh"
+    remediate: "unsued-services/client-services/remediation-client-services.sh"
+    tags: ["cis_services"]
+
+  - id: unused_server_services
+    name: "Unused Services - Server"
+    audit: "unsued-services/server-services/audit-services.sh"
+    remediate: "unsued-services/server-services/remediation-services.sh"
+    tags: ["cis_services"]
+
+  # -------- User Accounts / Environment --------
+  - id: default_env
+    name: "User Accounts - Default Environment"
+    audit: "user-accounts-env/default-env/audit-default-env.sh"
+    remediate: "user-accounts-env/default-env/remediation-default-env.sh"
+    tags: ["cis_user"]
+
+  - id: root_system_accounts
+    name: "User Accounts - Root/System Accounts"
+    audit: "user-accounts-env/root-system-accounts/audit-root-system.sh"
+    remediate: "user-accounts-env/root-system-accounts/remediation-root-system.sh"
+    tags: ["cis_user"]
+
