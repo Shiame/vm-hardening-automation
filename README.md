@@ -53,7 +53,7 @@ The goal is to ensure **secure, reproducible, and scalable** configuration of vi
 ## Prerequisites
 
 * **Control Node:** Windows with WSL or Linux machine
-* **Target Machines:** Ubuntu 22.04 or Windows Server
+* **Target Machines:** Ubuntu 22.04 
 * **Software:** Ansible, Bash, Lynis, SMTP server
 
 ---
